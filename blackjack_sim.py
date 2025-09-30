@@ -96,6 +96,7 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
 
         if sum(player_hand) == 21 and sum(dealer_hand) != 21:
             money += int(1.5 * bet)
+            print("hand won with blackjack")
             return 1
         elif sum(dealer_hand) == 21 and sum(player_hand) != 21:
             money -= bet
@@ -158,9 +159,11 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
             dealer_hand[dealer_hand.index(11)] = 1
         if sum(dealer_hand) > 21:
             money += bet
+            print("hand won, bet: " + str(bet))
             return 1
     if sum(player_hand) > sum(dealer_hand):
         money += bet
+        print("hand won, bet: " + str(bet))
         return 1
     elif sum(player_hand) == sum(dealer_hand):
         return 0
