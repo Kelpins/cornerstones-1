@@ -11,8 +11,8 @@ base_deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11] * 4 * deck_size
 
 money = 10000
 initial_bet = 100
-bet_strategy = "flat"  # flat / martingale / 1326 / dad / random
-insurance = False
+bet_strategy = "flat"
+insurance = False  # TODO: add insurance
 
 
 def shuffle_deck():
@@ -87,21 +87,37 @@ def calculate_bet_strategy(strategy, lpw, prev_bet, money):
         return min(initial_bet, money)
 
 
-def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
+def hand(
+    deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None, insurance=False
+):
     if len(player_hand) == 0:
         deal_card(deck, player_hand)
         dealer_card = deal_card(deck, dealer_hand)
         deal_card(deck, player_hand)
         deal_card(deck, dealer_hand)
 
+        insurance_bet = 0
+
+        if dealer_card == 11 and insurance and not (money < int(bet / 2)):
+            insurance_bet = int(bet / 2)
+            money -= insurance_bet
+
+        if insurance and sum(dealer_hand) == 21:
+            print("insurance pays")
+            money += 2 * insurance_bet
+        elif insurance and insurance_bet != 0:
+            print("insurance loses")
+
         if sum(player_hand) == 21 and sum(dealer_hand) != 21:
             money += int(1.5 * bet)
-            print("hand won with blackjack")
+            print("p win with blackjack, bet: " + str(bet))
             return 1, money
         elif sum(dealer_hand) == 21 and sum(player_hand) != 21:
             money -= bet
+            print("dealer blackjack, bet: " + str(bet))
             return -1, money
         elif sum(dealer_hand) == 21 and sum(player_hand) == 21:
+            print("push, bet: " + str(bet))
             return 0, money
 
     dealer_card = dealer_hand[0]
@@ -114,12 +130,12 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
                 player_hand[player_hand.index(11)] = 1
             if sum(player_hand) > 21:
                 money -= bet
+                print("p bust, bet: " + str(bet))
                 return -1, money
         elif action == "P":
             if money < bet * 2:
                 action = "H"
                 continue
-            money -= bet
             # Create new hands for splitting
             new_hand1 = [player_hand[0]]
             new_hand2 = [player_hand[1]]
@@ -142,12 +158,12 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
                 dealer_hand,
                 dealer_card,
             )
+            print("split, bet: " + str(bet))
             return max(result1, result2), money
         action = read_hand_strategy(player_hand, dealer_card)
 
     if action == "D":
         if not (money < bet * 2):
-            money -= bet
             bet *= 2
 
         deal_card(deck, player_hand)
@@ -155,6 +171,7 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
             player_hand[player_hand.index(11)] = 1
         if sum(player_hand) > 21:
             money -= bet
+            print("p bust, bet: " + str(bet))
             return -1, money
 
     while sum(dealer_hand) < 17:
@@ -170,32 +187,51 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
         print("hand won, bet: " + str(bet))
         return 1, money
     elif sum(player_hand) == sum(dealer_hand):
+        print("push, bet: " + str(bet))
         return 0, money
     else:
         money -= bet
+        print("hand lost, bet: " + str(bet))
         return -1, money
 
+    # should never reach here
     return 2, money
 
 
 def shoe(money, bet_strategy=bet_strategy, insurance=insurance):
+    if money <= 0:
+        print("run out of money.")
+        return money
     deck = shuffle_deck()
-    prev_hand, money = hand(deck, money, initial_bet, [], [], None)
+    prev_hand, money = hand(deck, money, initial_bet, [], [], None, insurance)
+    print("current money: " + str(money))
     prev_bet = initial_bet
     while (len(deck)) > len(base_deck) / 4:
         prev_bet = calculate_bet_strategy(bet_strategy, prev_hand, prev_bet, money)
-        prev_hand, money = hand(deck, money, prev_bet, [], [], None)
+        prev_hand, money = hand(deck, money, prev_bet, [], [], None, insurance)
         print("hand complete, cards left in shoe: " + str(len(deck)))
         print("current money: " + str(money))
+        if money <= 0:
+            print("run out of money.")
+            return money
     print("Shoe complete, reshuffling")
     return money
 
 
 def main():
+    strategy = input("Enter bet strategy: ")
+    if strategy not in ["flat", "martingale", "1326", "dad", "random"]:
+        print("strategy undefined, try again")
+        main()
+        return
+    if input("Do you take insurance? ") == "yes":
+        insurance = True
+    else:
+        insurance = False
     shoes = int(input("Enter number of shoes to simulate: "))
     current_money = money
     for i in range(shoes):
-        current_money = shoe(current_money)
+        current_money = shoe(current_money, strategy, insurance)
         print(f"After shoe {i+1}, total money: {current_money}")
     print(f"Final money: {current_money}")
 
