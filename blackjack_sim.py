@@ -97,14 +97,12 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
         if sum(player_hand) == 21 and sum(dealer_hand) != 21:
             money += int(1.5 * bet)
             print("hand won with blackjack")
-            return 1
+            return 1, money
         elif sum(dealer_hand) == 21 and sum(player_hand) != 21:
             money -= bet
-            return -1
+            return -1, money
         elif sum(dealer_hand) == 21 and sum(player_hand) == 21:
-            return 0
-        # run blackjack check here
-        print("new not split hand")
+            return 0, money
 
     dealer_card = dealer_hand[0]
 
@@ -116,29 +114,35 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
                 player_hand[player_hand.index(11)] = 1
             if sum(player_hand) > 21:
                 money -= bet
-                return -1
+                return -1, money
         elif action == "P":
             if money < bet * 2:
                 action = "H"
                 continue
             money -= bet
-            hand(
+            # Create new hands for splitting
+            new_hand1 = [player_hand[0]]
+            new_hand2 = [player_hand[1]]
+            deal_card(deck, new_hand1)
+            deal_card(deck, new_hand2)
+
+            result1, money = hand(
                 deck,
                 money,
                 bet,
-                [player_hand[0], deal_card(deck, [])],
+                new_hand1,
                 dealer_hand,
                 dealer_card,
             )
-            hand(
+            result2, money = hand(
                 deck,
                 money,
                 bet,
-                [player_hand[0], deal_card(deck, [])],
+                new_hand2,
                 dealer_hand,
                 dealer_card,
             )
-            return
+            return max(result1, result2), money
         action = read_hand_strategy(player_hand, dealer_card)
 
     if action == "D":
@@ -151,7 +155,7 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
             player_hand[player_hand.index(11)] = 1
         if sum(player_hand) > 21:
             money -= bet
-            return -1
+            return -1, money
 
     while sum(dealer_hand) < 17:
         deal_card(deck, dealer_hand)
@@ -160,37 +164,40 @@ def hand(deck, money, bet, player_hand=[], dealer_hand=[], dealer_card=None):
         if sum(dealer_hand) > 21:
             money += bet
             print("hand won, bet: " + str(bet))
-            return 1
+            return 1, money
     if sum(player_hand) > sum(dealer_hand):
         money += bet
         print("hand won, bet: " + str(bet))
-        return 1
+        return 1, money
     elif sum(player_hand) == sum(dealer_hand):
-        return 0
+        return 0, money
     else:
         money -= bet
-        return -1
+        return -1, money
 
-    return 2
+    return 2, money
 
 
-def shoe(bet_strategy=bet_strategy, insurance=insurance):
+def shoe(money, bet_strategy=bet_strategy, insurance=insurance):
     deck = shuffle_deck()
-    prev_hand = hand(deck, money, initial_bet, [], [], None)
+    prev_hand, money = hand(deck, money, initial_bet, [], [], None)
     prev_bet = initial_bet
     while (len(deck)) > len(base_deck) / 4:
         prev_bet = calculate_bet_strategy(bet_strategy, prev_hand, prev_bet, money)
-        prev_hand = hand(deck, money, prev_bet, [], [], None)
+        prev_hand, money = hand(deck, money, prev_bet, [], [], None)
         print("hand complete, cards left in shoe: " + str(len(deck)))
         print("current money: " + str(money))
     print("Shoe complete, reshuffling")
-    return
+    return money
 
 
 def main():
     shoes = int(input("Enter number of shoes to simulate: "))
+    current_money = money
     for i in range(shoes):
-        shoe()
+        current_money = shoe(current_money)
+        print(f"After shoe {i+1}, total money: {current_money}")
+    print(f"Final money: {current_money}")
 
 
 main()
