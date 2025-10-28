@@ -255,13 +255,20 @@ def main():
     shoes = 5
     current_money = money
     for i in range(shoes):
-        current_money = shoe(current_money, strategy, insurance)
+        current_money = shoe(
+            current_money, strategy, insurance
+        )  # TODO: make bet carry across shoes
         print(f"After shoe {i+1}, total money: {current_money}")
     if current_money <= starting_money:
         print("one additional shoe")
         current_money = shoe(current_money, strategy, insurance)
         print(f"After shoe {shoes+1}, total money: {current_money}")
     plt.plot(shoe_data)
+    plt.title("Blackjack Simulation - Money Over Time")
+    plt.xlabel("Hand Number")
+    plt.ylabel("Money")
+    plt.grid(True)
+    plt.savefig("blackjack_simulation.png")
     plt.show()
     print(f"Final money: {current_money}")
 
